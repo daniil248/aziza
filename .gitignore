@@ -97,8 +97,11 @@ dist/
 out/
 .next/
 
-# Project-specific
+# Project-specific runtime state (not tracked)
 api/aziza.db
 api/static/products/
+app/build/
+# Legacy local pre-build folder + zip (the canonical build now lives on the
+# server in /var/www/aziza/, produced by redeploy.sh — see docs/INFRA.md).
 app/deploy/
 app/aziza-food-deploy.zip

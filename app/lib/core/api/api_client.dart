@@ -7,13 +7,19 @@ import 'package:flutter/services.dart';
 import 'dto.dart';
 
 /// Resolves API base URL.
-/// - Web (debug): localhost (CORS configured server-side)
-/// - Android emulator: 10.0.2.2 (host loopback)
-/// - Physical device: must override via --dart-define=API_BASE_URL=http://<host-ip>:8000
+/// Priority:
+///   1. `--dart-define=API_BASE_URL=...` (explicit override)
+///   2. Web release: empty → relative `/api/v1` (frontend + backend on same domain)
+///   3. Web debug: `http://localhost:8000`
+///   4. Android emulator: `http://10.0.2.2:8000`
+///   5. iOS simulator / desktop: `http://localhost:8000`
+///
+/// Production deploy: serve the Flutter build under the same domain as the API
+/// (e.g. via nginx) and leave API_BASE_URL unset → relative URLs.
 String defaultApiBase() {
   const fromEnv = String.fromEnvironment('API_BASE_URL');
   if (fromEnv.isNotEmpty) return fromEnv;
-  if (kIsWeb) return 'http://localhost:8000';
+  if (kIsWeb) return kReleaseMode ? '' : 'http://localhost:8000';
   return defaultTargetPlatform == TargetPlatform.android
       ? 'http://10.0.2.2:8000'
       : 'http://localhost:8000';

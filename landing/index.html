@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FFFFFF">
+  <title>Aziza Food — demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #FFFFFF;
+      color: #2C2C2C;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 64px 24px 96px;
+      flex: 1;
+      width: 100%;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      font-size: 18px;
+    }
+    .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      background: #D4AF37;
+      display: inline-block;
+    }
+    h1 {
+      margin: 32px 0 8px;
+      font-size: 44px;
+      font-weight: 700;
+      letter-spacing: -1px;
+      line-height: 1.05;
+    }
+    .lead {
+      color: #7A7A7A;
+      font-size: 17px;
+      line-height: 1.5;
+      max-width: 520px;
+      margin: 0 0 40px;
+    }
+    .cards {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 720px) {
+      .cards { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    }
+    .card {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 22px 22px 24px;
+      background: #F5F5F5;
+      border-radius: 14px;
+      text-decoration: none;
+      color: inherit;
+      transition: transform .18s cubic-bezier(.2,0,0,1), background .18s;
+      border: 1px solid transparent;
+    }
+    .card:hover {
+      background: #FAF1D6;
+      border-color: #D4AF37;
+      transform: translateY(-2px);
+    }
+    .card .role {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: .8px;
+      text-transform: uppercase;
+      color: #B5942C;
+    }
+    .card .name {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -.4px;
+    }
+    .card .desc {
+      color: #7A7A7A;
+      font-size: 14px;
+      line-height: 1.45;
+      margin-top: 4px;
+    }
+    .card .arrow {
+      margin-top: 14px;
+      font-weight: 600;
+      color: #D4AF37;
+      font-size: 14px;
+      letter-spacing: .3px;
+    }
+    .meta {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid #EAEAEA;
+      color: #B5B5B5;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+    .meta b { color: #2C2C2C; }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <span class="brand"><span class="dot"></span> Aziza Food</span>
+    <h1>Premium food delivery, Алмата.</h1>
+    <p class="lead">
+      Демонстрационная сборка дизайна и навигации.
+      Манты, пельмени, самса, соусы — три языка (RU/KK/EN), цены в&nbsp;₸.
+      Ниже — три приложения из одного Flutter-кода.
+    </p>
+
+    <div class="cards">
+      <a class="card" href="/client/">
+        <span class="role">Клиент</span>
+        <span class="name">Aziza Food</span>
+        <span class="desc">Каталог, корзина, профиль, экран Premium-подписки.</span>
+        <span class="arrow">Открыть →</span>
+      </a>
+      <a class="card" href="/admin/">
+        <span class="role">Админка</span>
+        <span class="name">Aziza Admin</span>
+        <span class="desc">Дашборд, товары, заказы, аналитика, рассылки.</span>
+        <span class="arrow">Открыть →</span>
+      </a>
+      <a class="card" href="/courier/">
+        <span class="role">Курьер</span>
+        <span class="name">Aziza Courier</span>
+        <span class="desc">Активные заказы, маршрут, подтверждение доставки.</span>
+        <span class="arrow">Открыть →</span>
+      </a>
+    </div>
+
+    <p class="meta">
+      <b>Стек:</b> Flutter 3.41 · FastAPI · SQLite (dev) → managed Postgres (prod) · i18n RU/KK/EN<br>
+      <b>Демо-режим:</b> данные каталога вшиты в сборку. Live-API подключается одной строкой `.env`.
+    </p>
+  </main>
+</body>
+</html>
