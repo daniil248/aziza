@@ -1,6 +1,6 @@
 # Aziza Food
 
-Premium food delivery for Almaty — iOS + Android (Flutter), admin panel, and FastAPI backend in a single, transparent monorepo.
+Premium food delivery for Almaty — iOS + Android (Flutter), admin panel, FastAPI backend in a single transparent monorepo.
 
 **Live**: https://food.telegbot3td.ru
 
@@ -39,9 +39,11 @@ fooddelivery/
 │
 ├── landing/               # Landing page (index.html)
 │
+├── deploy.sh              # ← one-command deploy from your laptop
+│
 └── docs/
     ├── SPEC.md            # full technical specification
-    ├── INFRA.md           # deployment runbook
+    ├── INFRA.md           # deployment runbook (read this!)
     └── PRODUCTION.md      # production migration checklist
 ```
 
@@ -60,7 +62,7 @@ fooddelivery/
 | Image upload | FastAPI multipart → `/static/products/` | swap to R2 in prod |
 | i18n | Flutter ARB (compiled) | ru / kk / en |
 | Currency | KZT (₸) | integer minor units |
-| Hosting | VPS (Ubuntu 22.04) + nginx + Let's Encrypt | one server, one domain |
+| Hosting | VPS Ubuntu 22.04 + nginx + Let's Encrypt | one server, one domain |
 
 ## Quick start (local)
 
@@ -88,14 +90,11 @@ flutter run -d chrome -t lib/main_admin.dart
 ## Deploy a change
 
 ```bash
-# On your laptop
-git push
-
-# On the server
-ssh root@92.51.44.138 '/root/aziza/redeploy.sh'
+git push                  # share the source
+./deploy.sh               # build + ship + restart (~2-3 minutes)
 ```
 
-That's it. ~3-5 minutes for the rebuild. See [`docs/INFRA.md`](docs/INFRA.md) for everything else.
+`deploy.sh` builds Flutter web on your machine, ships the static bundles to the VPS via tar+ssh, runs `redeploy.sh` on the server (git pull + Python deps + restart uvicorn), and smoke-tests all endpoints. See [`docs/INFRA.md`](docs/INFRA.md) for everything.
 
 ## Languages
 
