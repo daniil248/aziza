@@ -1,0 +1,104 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.env
+.env.local
+.env.*.local
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/.packages
+app/.pub-cache/
+app/.pub/
+app/build/
+app/.gradle/
+app/android/.gradle/
+app/android/captures/
+app/android/gradlew
+app/android/gradlew.bat
+app/android/local.properties
+app/android/**/GeneratedPluginRegistrant.java
+app/android/key.properties
+app/**/*.keystore
+app/**/*.jks
+app/ios/Flutter/App.framework
+app/ios/Flutter/Flutter.framework
+app/ios/Flutter/Flutter.podspec
+app/ios/Flutter/Generated.xcconfig
+app/ios/Flutter/ephemeral
+app/ios/Flutter/app.flx
+app/ios/Flutter/app.zip
+app/ios/Flutter/flutter_assets/
+app/ios/Flutter/flutter_export_environment.sh
+app/ios/ServiceDefinitions.json
+app/ios/Runner/GeneratedPluginRegistrant.*
+app/ios/Pods/
+app/ios/.symlinks/
+app/macos/Flutter/GeneratedPluginRegistrant.swift
+app/macos/Flutter/ephemeral/
+app/macos/Pods/
+app/linux/flutter/ephemeral
+app/windows/flutter/ephemeral
+app/web/build/
+
+# Generated code (will be regenerated)
+app/lib/**/*.g.dart
+app/lib/**/*.freezed.dart
+app/lib/**/*.gr.dart
+
+# Coverage
+coverage/
+*.lcov
+
+# Logs
+logs/
+*.log
+
+# Docker
+postgres-data/
+redis-data/
+
+# Secrets
+.env.production
+secrets/
+*.pem
+*.key
+
+# Build artifacts
+dist/
+out/
+.next/
+
+# Project-specific
+api/aziza.db
+api/static/products/
+app/deploy/
+app/aziza-food-deploy.zip
