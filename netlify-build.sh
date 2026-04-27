@@ -2,46 +2,44 @@
 # Builds all three Flutter web apps + assembles landing page into ./public/
 # for Netlify to publish.
 #
-# Total build time on Netlify: ~5-7 minutes (Flutter SDK download dominates).
-set -euo pipefail
+# We git-clone Flutter's stable channel (smaller + Flutter relies on .git for
+# version tracking; tarball approach hits known precache issues on CI).
+set -eo pipefail
+set -x
 
-FLUTTER_VERSION="${FLUTTER_VERSION:-3.41.7}"
+FLUTTER_VERSION="${FLUTTER_VERSION:-stable}"
 SDK_DIR="$HOME/flutter"
 
-echo "==> Installing Flutter $FLUTTER_VERSION"
-if [ ! -d "$SDK_DIR" ]; then
-  curl -fsSL -o /tmp/flutter.tar.xz \
-    "https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_${FLUTTER_VERSION}-stable.tar.xz"
-  tar -xf /tmp/flutter.tar.xz -C "$HOME"
+echo "==> Installing Flutter ($FLUTTER_VERSION)"
+if [ ! -d "$SDK_DIR/bin" ]; then
+  git clone --depth 1 -b "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$SDK_DIR"
 fi
 export PATH="$SDK_DIR/bin:$PATH"
+git config --global --add safe.directory "$SDK_DIR"
 flutter --version
-flutter config --no-analytics
-flutter precache --web
+flutter config --no-analytics --enable-web
 
 echo "==> Resolving Flutter dependencies"
 cd app
 flutter pub get
-flutter gen-l10n
 
 PUB="../public"
 rm -rf "$PUB"
 mkdir -p "$PUB"
 
-echo "==> Building client app"
-flutter build web --release --target=lib/main_client.dart --base-href=/client/
-cp -r build/web "$PUB/client"
-rm -rf build/web
+build_app() {
+  local target="$1"
+  local out="$2"
+  local href="$3"
+  echo "==> Building $out"
+  flutter build web --release --target="lib/$target" --base-href="$href" --no-tree-shake-icons
+  cp -r build/web "$PUB/$out"
+  rm -rf build/web
+}
 
-echo "==> Building admin app"
-flutter build web --release --target=lib/main_admin.dart --base-href=/admin/
-cp -r build/web "$PUB/admin"
-rm -rf build/web
-
-echo "==> Building courier app"
-flutter build web --release --target=lib/main_courier.dart --base-href=/courier/
-cp -r build/web "$PUB/courier"
-rm -rf build/web
+build_app "main_client.dart"  "client"  "/client/"
+build_app "main_admin.dart"   "admin"   "/admin/"
+build_app "main_courier.dart" "courier" "/courier/"
 
 echo "==> Copying landing page"
 cp deploy/index.html "$PUB/"
