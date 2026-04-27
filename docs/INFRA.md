@@ -1,6 +1,6 @@
 # Aziza Food — infrastructure runbook
 
-Single source of truth: **GitHub** ([github.com/daniil248/aziza](https://github.com/daniil248/aziza)).
+**Single source of truth: GitHub** ([github.com/daniil248/aziza](https://github.com/daniil248/aziza)).
 Everything below is built **from `main` branch**. Never edit on the server. Never deploy local builds.
 
 ---
@@ -10,98 +10,121 @@ Everything below is built **from `main` branch**. Never edit on the server. Neve
 ```
 GitHub  github.com/daniil248/aziza
    │
-   ├── Netlify (frontend)        Auto-deploys on every push to main.
-   │   azizza.netlify.app
-   │   Build: bash netlify-build.sh → public/ → deployed.
+   │  git push (your laptop → main)
+   ▼
+VPS  92.51.44.138  (single host, single domain)
    │
-   ├── VPS 92.51.44.138 (backend)  Manual update: ./redeploy.sh on server.
-   │   /root/aziza  (git working copy)
-   │   systemd unit: aziza-api.service  →  uvicorn on 127.0.0.1:8765
-   │   nginx server block:  <subdomain> → proxy_pass http://127.0.0.1:8765
-   │   Let's Encrypt cert via certbot
+   ├── /root/aziza            ← git working copy (pulled by redeploy.sh)
+   │   ├── api/               ← FastAPI source
+   │   ├── app/               ← Flutter source (3 apps from one codebase)
+   │   ├── landing/           ← landing page (index.html)
+   │   ├── docs/              ← SPEC, INFRA, PRODUCTION
+   │   └── redeploy.sh        ← one-command rebuild + restart
    │
-   └── App Store / Play Console (mobile, Phase 2)
-       Built via Codemagic (iOS) and locally / GitHub Actions (Android)
+   ├── /var/www/aziza/        ← built static (served by nginx)
+   │   ├── index.html         ← landing
+   │   ├── client/            ← Flutter web — customer
+   │   ├── admin/             ← Flutter web — admin (CRUD + photo upload)
+   │   └── courier/           ← Flutter web — courier
+   │
+   ├── /opt/flutter/          ← Flutter SDK (stable, used by redeploy.sh)
+   │
+   ├── systemd: aziza-api.service
+   │   ExecStart: /root/aziza/api/.venv/bin/uvicorn app.main:app
+   │              --host 127.0.0.1 --port 8765
+   │   uses SQLite at /root/aziza/api/aziza.db
+   │   uploads to /root/aziza/api/static/products/<uuid>.<ext>
+   │
+   └── nginx: /etc/nginx/sites-enabled/food.telegbot3td.ru
+       Public domain:  https://food.telegbot3td.ru
+       Cert:           Let's Encrypt (auto-renewal via certbot.timer)
+       Routes:
+         /                    → /var/www/aziza/index.html (landing)
+         /client/  /admin/  /courier/  → Flutter web SPAs
+         /api/*               → 127.0.0.1:8765
+         /static/*            → 127.0.0.1:8765 (uploaded images)
+         /docs                → 127.0.0.1:8765 (Swagger UI)
 ```
+
+**Why this layout:** frontend and backend share one origin. No CORS. No mixed content. One deploy command. One source of truth.
 
 ---
 
-## Frontend (Netlify)
+## Live URLs
 
-- **Source**: `app/lib/main_client.dart`, `main_admin.dart`, `main_courier.dart` + `deploy/index.html`
-- **Build script**: [`netlify-build.sh`](../netlify-build.sh) — clones Flutter stable, builds 3 web apps, assembles `public/`
-- **Deploy trigger**: every `git push` to `main` → Netlify webhook → rebuild
-- **Live URLs**:
-  - `/` — landing page with 3 buttons
-  - `/client/` — customer app
-  - `/admin/` — admin panel
-  - `/courier/` — courier app
-- **Backend URL injection**: build environment variable `API_BASE_URL` (Netlify Site Settings → Environment Variables, OR pinned in `netlify.toml`). Read in Flutter via `String.fromEnvironment('API_BASE_URL')`.
-- **Site ID**: `90d416c3-e12e-4f4c-a60e-9a56cba3d980` (URL `https://azizza.netlify.app`)
-
-To force rebuild without code change: Netlify dashboard → Deploys → **Trigger deploy → Clear cache and deploy**.
+| Path | Purpose |
+|---|---|
+| https://food.telegbot3td.ru/ | Landing page with 3 buttons |
+| https://food.telegbot3td.ru/client/ | Customer mobile-first app |
+| https://food.telegbot3td.ru/admin/ | Admin panel (full CRUD + photo upload) |
+| https://food.telegbot3td.ru/courier/ | Courier app |
+| https://food.telegbot3td.ru/api/v1/health | API health probe |
+| https://food.telegbot3td.ru/docs | Swagger UI (FastAPI auto-generated) |
 
 ---
 
-## Backend (VPS)
+## Update flow (after any change)
 
-- **Server**: `92.51.44.138` (Ubuntu 22.04)
-- **Path**: `/root/aziza` (git clone of main)
-- **Service**: `aziza-api.service` (systemd) — runs `uvicorn` on `127.0.0.1:8765`
-- **Database**: SQLite `/root/aziza/api/aziza.db` (file-based, persisted across restarts)
-- **Image uploads**: `/root/aziza/api/static/products/<uuid>.<ext>` (served via FastAPI's StaticFiles at `/static/...`)
-- **Public URL**: `https://<subdomain>` (TBD — set after DNS) — nginx proxies → uvicorn
-- **TLS**: Let's Encrypt via certbot, auto-renewal via cron
+1. **On your laptop:** edit code → commit → push to `main`.
+2. **On the server:** run one command:
+   ```bash
+   ssh root@92.51.44.138 '/root/aziza/redeploy.sh'
+   ```
 
-### Update backend (after a push to GitHub)
+`redeploy.sh` does:
+1. `git pull` (latest main)
+2. Update Python deps (`pip install -e .`)
+3. Rebuild all 3 Flutter web apps **into a temp dir**, then **atomically swap** with `/var/www/aziza/` — users never see a half-built site
+4. `systemctl restart aziza-api`
+5. Print last commit + live URLs
 
-SSH to server then:
-```bash
-/root/aziza/redeploy.sh
-```
+A full redeploy takes **~3-5 minutes** (Flutter rebuild dominates).
 
-Equivalent of:
-```bash
-cd /root/aziza
-git pull --ff-only
-cd api
-.venv/bin/pip install -e . --quiet
-systemctl restart aziza-api
-```
+---
 
-The script also tails the latest log lines so you can confirm it started cleanly.
-
-### Inspect / debug
+## Inspect / debug
 
 ```bash
+ssh root@92.51.44.138
+
+# Backend
 systemctl status aziza-api          # current state
 journalctl -u aziza-api -f          # live log
 journalctl -u aziza-api -n 100      # last 100 lines
 
-curl http://127.0.0.1:8765/api/v1/health           # local healthcheck
-curl https://<subdomain>/api/v1/health             # via nginx
-```
+# nginx
+nginx -t                            # test config
+systemctl reload nginx              # apply config without dropping conns
+tail -f /var/log/nginx/access.log
 
-### Reset database (dev only — wipes orders, products, uploads)
-
-```bash
-systemctl stop aziza-api
-rm /root/aziza/api/aziza.db
-rm -rf /root/aziza/api/static/products/*
-cd /root/aziza/api
-.venv/bin/python -m app.seed.run
-systemctl start aziza-api
+# Quick smoke
+curl https://food.telegbot3td.ru/api/v1/health
+curl https://food.telegbot3td.ru/api/v1/categories | jq
 ```
 
 ---
 
-## Local development
+## Reset database (dev/demo only — wipes orders, products, uploads)
 
 ```bash
-# Backend (one-time)
+ssh root@92.51.44.138 <<'EOF'
+systemctl stop aziza-api
+rm /root/aziza/api/aziza.db
+rm -rf /root/aziza/api/static/products/*
+cd /root/aziza/api && .venv/bin/python -m app.seed.run
+systemctl start aziza-api
+EOF
+```
+
+---
+
+## Local development (no server needed)
+
+```bash
+# Backend
 cd api
 python -m venv .venv
-.venv/Scripts/activate     # Windows
+.venv\Scripts\activate          # Windows
 pip install -e .
 python -m app.seed.run
 uvicorn app.main:app --reload --port 8000
@@ -112,7 +135,12 @@ flutter pub get
 flutter run -d chrome -t lib/main_client.dart
 ```
 
-The Flutter app auto-detects `localhost:8000` for web builds and falls back to bundled JSON snapshots in `assets/demo/` if the API is unreachable. So even with backend down, the catalog is browsable for design demo.
+The Flutter app on web in **debug** mode hits `http://localhost:8000`. In **release** mode it uses **relative URLs** (`/api/v1`) — same-origin, the way it works in production.
+
+To target a remote API from a local web build:
+```bash
+flutter run -d chrome --dart-define=API_BASE_URL=https://food.telegbot3td.ru -t lib/main_client.dart
+```
 
 ---
 
@@ -123,8 +151,7 @@ These are **runtime state**, regenerated locally / on server:
 - `api/aziza.db` — SQLite database
 - `api/static/products/` — uploaded images
 - `app/.dart_tool/`, `app/build/` — Flutter caches and build output
-- `app/deploy/` — local pre-build artifact (only Netlify produces the canonical build)
-- `app/aziza-food-deploy.zip` — local zip for manual drop deploys
+- `app/deploy/`, `app/aziza-food-deploy.zip` — legacy local pre-build (no longer used)
 - `*.env`, `*.key`, `secrets/` — secrets
 
 `.gitignore` enforces this.
@@ -133,20 +160,41 @@ These are **runtime state**, regenerated locally / on server:
 
 ## Versioning + sync guarantees
 
-- Frontend version = `git rev-parse HEAD` in Netlify build log
-- Backend version = `git rev-parse HEAD` in `/root/aziza` (run `cd /root/aziza && git rev-parse HEAD`)
-- They should match after any push + redeploy
+- **Backend version** = `git rev-parse HEAD` in `/root/aziza`
+- **Frontend version** = same — both rebuilt from the same commit by `redeploy.sh`
+- **They cannot drift** — single rebuild path, atomic swap
 
 To verify in sync:
 ```bash
 # locally
 git rev-parse main
 
-# server backend
+# server (both backend and frontend run from this commit)
 ssh root@92.51.44.138 'cd /root/aziza && git rev-parse HEAD'
-
-# frontend (open dashboard or DevTools network tab → check `commit_ref` in Netlify deploy)
-curl -s https://api.netlify.com/api/v1/sites/<SITE_ID>/deploys?per_page=1 | jq -r '.[0].commit_ref'
 ```
 
-If they diverge: push to GitHub first, then run `redeploy.sh` on server. Netlify catches up automatically.
+If they diverge: someone edited on the server (don't). Run `git stash && git pull && /root/aziza/redeploy.sh` to recover.
+
+---
+
+## Cert renewal
+
+Let's Encrypt cert for `food.telegbot3td.ru` auto-renews via the system-installed `certbot.timer`. To force test:
+```bash
+certbot renew --dry-run
+```
+
+Renewal modifies cert files only — nginx picks them up via reload (handled by certbot's deploy hooks).
+
+---
+
+## Production-grade upgrades (when scaling beyond demo)
+
+- **DB**: SQLite → managed Postgres (Neon / Supabase / self-hosted on same VPS via existing `localhost:5432`). Change `DATABASE_URL` in `aziza-api.service`, restart.
+- **Image storage**: local `/root/aziza/api/static/` → Cloudflare R2 (presigned URLs). Trivially swappable behind one upload service.
+- **Auth**: currently OTP screens are mocked. Wire SMS via Mobizon / SMSC.kz when ready.
+- **Payments**: Kaspi / Halyk / Apple Pay — requires legal entity.
+- **iOS build**: Codemagic CI from this repo (`codemagic.yaml`) — needs Apple Developer Program ($99/year).
+- **Android build**: `flutter build appbundle --release` locally, upload to Play Console ($25 one-time).
+
+See [docs/PRODUCTION.md](PRODUCTION.md) for the full migration checklist.
