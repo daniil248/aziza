@@ -1,4 +1,4 @@
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from jose import JWTError, jwt
@@ -21,7 +21,7 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def _create_token(subject: str, ttl: timedelta, token_type: str) -> str:
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)  # `datetime.UTC` is 3.11+; server runs 3.10
     payload = {
         "sub": subject,
         "iat": int(now.timestamp()),
