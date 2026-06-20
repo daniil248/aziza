@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 30
     api_v1_prefix: str = "/api/v1"
 
+    # Flat delivery fee applied to every order, in minor units (tiyn). Default 0
+    # (free delivery); override via DELIVERY_FEE_MINOR env var when policy changes.
+    delivery_fee_minor: int = 0
+
 
 @lru_cache
 def get_settings() -> Settings:
