@@ -23,14 +23,6 @@ GoRouter buildClientRouter({bool seenOnboarding = false}) {
       GoRoute(
         path: '/login',
         builder: (_, __) => const LoginScreen(),
-        routes: [
-          GoRoute(
-            path: 'otp',
-            builder: (_, state) => OtpScreen(
-              phone: state.uri.queryParameters['phone'] ?? '',
-            ),
-          ),
-        ],
       ),
       ShellRoute(
         builder: (context, state, child) => ClientShell(child: child),

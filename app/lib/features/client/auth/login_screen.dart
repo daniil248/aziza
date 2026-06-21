@@ -1,193 +1,184 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../../core/api/auth_api.dart';
 import '../../../core/design/tokens.dart';
 import '../../../core/design/typography.dart';
-import '../../../core/i18n/generated/app_localizations.dart';
+import '../../../core/session/session.dart';
 
-class LoginScreen extends StatefulWidget {
+/// Phone + password login with a register toggle. Replaces the old OTP stub.
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
-  final _ctrl = TextEditingController();
-  bool get _valid => _ctrl.text.replaceAll(RegExp(r'\D'), '').length >= 11;
+class _LoginScreenState extends ConsumerState<LoginScreen> {
+  final _phoneCtrl = TextEditingController();
+  final _passCtrl = TextEditingController();
+  final _nameCtrl = TextEditingController();
+
+  bool _register = false;
+  bool _busy = false;
+  String? _error;
+
+  String get _digits => _phoneCtrl.text.replaceAll(RegExp(r'\D'), '');
+  bool get _valid => _digits.length >= 10 && _passCtrl.text.length >= 6;
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _phoneCtrl.dispose();
+    _passCtrl.dispose();
+    _nameCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_valid || _busy) return;
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      final session = ref.read(sessionProvider.notifier);
+      if (_register) {
+        await session.register(_digits, _passCtrl.text, name: _nameCtrl.text.trim());
+      } else {
+        await session.loginWithPassword(_digits, _passCtrl.text);
+      }
+      if (mounted) context.go('/');
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      if (mounted) setState(() => _error = 'Не удалось войти. Попробуйте позже.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final t = AppL10n.of(context);
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(LucideIcons.arrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go('/'),
         ),
       ),
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: AppSpacing.lg),
               Text(
-                t.loginTitle,
+                _register ? 'Регистрация' : 'Вход',
                 style: AppTypography.display(AppColors.textPrimary).copyWith(fontSize: 32),
               ),
               const SizedBox(height: AppSpacing.xxl),
+              if (_register) ...[
+                TextField(
+                  controller: _nameCtrl,
+                  textCapitalization: TextCapitalization.words,
+                  style: AppTypography.bodyMedium(AppColors.textPrimary)
+                      .copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                  decoration: const InputDecoration(
+                    hintText: 'Имя',
+                    prefixIcon: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                      child: Icon(LucideIcons.user, size: 20),
+                    ),
+                    prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.md),
+              ],
               TextField(
-                controller: _ctrl,
+                controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
-                autofocus: true,
                 inputFormatters: [
                   FilteringTextInputFormatter.allow(RegExp(r'[\d+\-\(\) ]')),
                   LengthLimitingTextInputFormatter(20),
                 ],
                 onChanged: (_) => setState(() {}),
                 style: AppTypography.bodyMedium(AppColors.textPrimary)
-                    .copyWith(fontSize: 18, fontWeight: FontWeight.w600),
-                decoration: InputDecoration(
-                  hintText: t.loginPhoneHint,
-                  prefixIcon: const Padding(
+                    .copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(
+                  hintText: '+7 (___) ___-__-__',
+                  prefixIcon: Padding(
                     padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
                     child: Icon(LucideIcons.phone, size: 20),
                   ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+                  prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
                 ),
               ),
               const SizedBox(height: AppSpacing.md),
-              Text(
-                t.loginPolicy,
-                style: AppTypography.caption(AppColors.textSecondary),
+              TextField(
+                controller: _passCtrl,
+                obscureText: true,
+                onChanged: (_) => setState(() {}),
+                onSubmitted: (_) => _submit(),
+                style: AppTypography.bodyMedium(AppColors.textPrimary)
+                    .copyWith(fontSize: 16, fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(
+                  hintText: 'Пароль (мин. 6 символов)',
+                  prefixIcon: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                    child: Icon(LucideIcons.lock, size: 20),
+                  ),
+                  prefixIconConstraints: BoxConstraints(minWidth: 0, minHeight: 0),
+                ),
               ),
-              const Spacer(),
+              if (_error != null) ...[
+                const SizedBox(height: AppSpacing.md),
+                Row(
+                  children: [
+                    const Icon(LucideIcons.circleAlert, size: 16, color: AppColors.error),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: AppTypography.caption(AppColors.error),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: AppSpacing.xxl),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _valid
-                      ? () => context.push('/login/otp?phone=${Uri.encodeComponent(_ctrl.text)}')
-                      : null,
-                  child: Text(t.loginGetCode),
+                  onPressed: _valid && !_busy ? _submit : null,
+                  child: _busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      : Text(_register ? 'Зарегистрироваться' : 'Войти'),
                 ),
               ),
-              const SizedBox(height: AppSpacing.xl),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class OtpScreen extends StatefulWidget {
-  const OtpScreen({super.key, required this.phone});
-  final String phone;
-
-  @override
-  State<OtpScreen> createState() => _OtpScreenState();
-}
-
-class _OtpScreenState extends State<OtpScreen> {
-  final _ctrl = TextEditingController();
-  final _focus = FocusNode();
-  bool get _valid => _ctrl.text.length == 4;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
-  }
-
-  @override
-  void dispose() {
-    _ctrl.dispose();
-    _focus.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = AppL10n.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrowLeft, size: 22),
-          onPressed: () => Navigator.of(context).maybePop(),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: AppSpacing.lg),
-              Text(
-                t.otpTitle,
-                style: AppTypography.display(AppColors.textPrimary).copyWith(fontSize: 32),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                t.otpSent(widget.phone),
-                style: AppTypography.body(AppColors.textSecondary),
-              ),
-              const SizedBox(height: AppSpacing.xxl),
-              Center(
-                child: SizedBox(
-                  width: 240,
-                  child: TextField(
-                    controller: _ctrl,
-                    focusNode: _focus,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 4,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    onChanged: (v) {
-                      setState(() {});
-                      if (v.length == 4) {
-                        Future.delayed(const Duration(milliseconds: 300), () {
-                          if (mounted) context.go('/');
-                        });
-                      }
-                    },
-                    style: AppTypography.display(AppColors.textPrimary).copyWith(
-                      fontSize: 36,
-                      letterSpacing: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    decoration: const InputDecoration(
-                      counterText: '',
-                      hintText: '— — — —',
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
+              const SizedBox(height: AppSpacing.md),
               Center(
                 child: TextButton(
-                  onPressed: () {},
-                  child: Text(t.otpResend),
-                ),
-              ),
-              const Spacer(),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _valid ? () => context.go('/') : null,
-                  child: Text(t.otpVerify),
+                  onPressed: _busy
+                      ? null
+                      : () => setState(() {
+                            _register = !_register;
+                            _error = null;
+                          }),
+                  child: Text(
+                    _register
+                        ? 'Уже есть аккаунт? Войти'
+                        : 'Нет аккаунта? Регистрация',
+                  ),
                 ),
               ),
               const SizedBox(height: AppSpacing.xl),
