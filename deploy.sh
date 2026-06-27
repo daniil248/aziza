@@ -36,8 +36,9 @@ build_one() {
   echo "      $(stat -c%s "$TMP/$out/main.dart.js" 2>/dev/null || stat -f%z "$TMP/$out/main.dart.js") bytes main.dart.js"
 }
 build_one main_client.dart  client  /client/
-build_one main_admin.dart   admin   /admin/
-build_one main_courier.dart courier /courier/
+# admin + courier are fast vanilla-JS apps now (no Flutter build) — ship as-is.
+cp -r web/admin   "$TMP/admin"
+cp -r web/courier "$TMP/courier"
 cp landing/index.html "$TMP/index.html"
 
 step "3/5  Shipping to $SERVER:$REMOTE_WEB (tar+ssh)"
