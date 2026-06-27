@@ -1,55 +1,48 @@
 #!/usr/bin/env bash
-# Aziza Food — local deploy script.
+# Aziza Food — deploy script (static, no build step).
 #
-# Builds Flutter web on YOUR machine, ships static output to the VPS via
-# tar+ssh, triggers a backend update via SSH. The server does NOT compile
-# Flutter (its 3.8 GB RAM is shared with other tenants — Flutter compile
-# would starve them).
+# client / admin / courier are now fast vanilla-JS apps under web/. We just
+# ship them to the VPS via tar+ssh and trigger a backend update via SSH.
+# (No Flutter SDK required anymore — the old ~3MB Flutter bundles were slow
+# and have been replaced.)
 #
-# Requires: flutter, ssh, tar (Git Bash on Windows ships these).
+# Requires: ssh, tar, curl (Git Bash on Windows ships these).
 # Usage:    ./deploy.sh
 set -euo pipefail
 
 SERVER="${AZIZA_SERVER:-root@92.51.44.138}"
-DOMAIN="${AZIZA_DOMAIN:-food.telegbot3td.ru}"
+DOMAIN="${AZIZA_DOMAIN:-food.netchess.ru}"
 REMOTE_WEB="/var/www/aziza"
 REMOTE_REPO="/root/aziza"
-APP=app
-BUILD=$APP/build/web
-FLUTTER="${FLUTTER:-flutter}"
 
 step() { printf "\n\033[1m==> %s\033[0m\n" "$*"; }
 
-step "1/5  flutter pub get"
-( cd "$APP" && "$FLUTTER" pub get >/dev/null )
+[ -f web/client/index.html ]  || { echo "FAIL: web/client missing";  exit 1; }
+[ -f web/admin/index.html ]   || { echo "FAIL: web/admin missing";   exit 1; }
+[ -f web/courier/index.html ] || { echo "FAIL: web/courier missing"; exit 1; }
 
-step "2/5  Building 3 web bundles locally"
+step "1/4  Assembling static bundles"
 TMP=$(mktemp -d -t aziza-deploy.XXXXXX)
 trap 'rm -rf "$TMP"' EXIT
-build_one() {
-  local target="$1" out="$2" href="$3"
-  echo "    → $out"
-  ( cd "$APP" && MSYS_NO_PATHCONV=1 "$FLUTTER" build web --release --target="lib/$target" --base-href="$href" --no-tree-shake-icons ) >/dev/null
-  cp -r "$BUILD" "$TMP/$out"
-  rm -rf "$BUILD"
-  test -f "$TMP/$out/main.dart.js" || { echo "FAIL: main.dart.js missing in $out"; exit 1; }
-  echo "      $(stat -c%s "$TMP/$out/main.dart.js" 2>/dev/null || stat -f%z "$TMP/$out/main.dart.js") bytes main.dart.js"
-}
-build_one main_client.dart  client  /client/
-# admin + courier are fast vanilla-JS apps now (no Flutter build) — ship as-is.
+cp -r web/client  "$TMP/client"
 cp -r web/admin   "$TMP/admin"
 cp -r web/courier "$TMP/courier"
 cp landing/index.html "$TMP/index.html"
 
-step "3/5  Shipping to $SERVER:$REMOTE_WEB (tar+ssh)"
-( cd "$TMP" && tar czf - . ) | ssh "$SERVER" "rm -rf $REMOTE_WEB/*; tar xzf - -C $REMOTE_WEB/; chown -R www-data:www-data $REMOTE_WEB"
+step "2/4  Backing up live web root + shipping (tar+ssh)"
+( cd "$TMP" && tar czf - . ) | ssh "$SERVER" "
+  cp -a $REMOTE_WEB ${REMOTE_WEB}.bak.\$(date +%s) 2>/dev/null || true
+  rm -rf $REMOTE_WEB/*
+  tar xzf - -C $REMOTE_WEB/
+  chown -R www-data:www-data $REMOTE_WEB
+"
 
-step "4/5  Pulling backend changes + restarting API"
+step "3/4  Pulling backend changes + restarting API"
 ssh "$SERVER" "$REMOTE_REPO/redeploy.sh"
 
-step "5/5  Smoke test"
+step "4/4  Smoke test"
 fail=0
-for path in / /client/ /admin/ /courier/ /client/main.dart.js /api/v1/health; do
+for path in / /client/ /admin/ /courier/ /client/app.js /api/v1/health; do
   code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "https://$DOMAIN$path")
   printf "    %s  https://%s%s\n" "$code" "$DOMAIN" "$path"
   [ "$code" = "200" ] || fail=1

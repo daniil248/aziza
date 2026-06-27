@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5" />
+  <meta name="theme-color" content="#ef5126" />
+  <meta name="description" content="Aziza Food — доставка домашних мантов, пельменей, самсы и полуфабрикатов по Алматы. Быстро и вкусно." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Aziza Food" />
+
+  <!-- Open Graph / link previews -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Aziza Food" />
+  <meta property="og:title" content="Aziza Food — доставка мантов и пельменей в Алматы" />
+  <meta property="og:description" content="Домашние манты, пельмени, самса и полуфабрикаты. Заказ онлайн с доставкой по Алматы." />
+  <meta property="og:locale" content="ru_RU" />
+  <meta name="twitter:card" content="summary_large_image" />
+
+  <title>Aziza Food — доставка мантов, пельменей и самсы в Алматы</title>
+
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ef5126'/%3E%3Ctext x='32' y='44' font-size='38' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E" />
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23ef5126'/%3E%3Ctext x='32' y='44' font-size='38' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Sticky header -->
+    <header class="topbar" id="topbar">
+      <div class="topbar__inner">
+        <button class="brand" id="brand" aria-label="На главную">
+          <span class="brand__logo">A</span>
+          <span class="brand__text">
+            <span class="brand__name">Aziza Food</span>
+            <span class="brand__sub">доставка по Алматы</span>
+          </span>
+        </button>
+        <div class="topbar__actions">
+          <button class="iconbtn" id="account-btn" aria-label="Профиль">
+            <span class="iconbtn__ic">👤</span>
+            <span class="iconbtn__label" id="account-label">Войти</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="view" class="view"></main>
+
+    <!-- Sticky bottom cart bar -->
+    <div class="cartbar" id="cartbar" hidden>
+      <button class="cartbar__btn" id="cartbar-btn">
+        <span class="cartbar__count" id="cartbar-count">0</span>
+        <span class="cartbar__label">Корзина</span>
+        <span class="cartbar__total" id="cartbar-total">0 ₸</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="sheet-root"></div>
+  <div id="toast-root" class="toast-root"></div>
+
+  <script src="app.js" defer></script>
+</body>
+</html>

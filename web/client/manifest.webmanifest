@@ -1,0 +1,21 @@
+{
+  "name": "Aziza Food — доставка по Алматы",
+  "short_name": "Aziza Food",
+  "description": "Доставка домашних мантов, пельменей, самсы и полуфабрикатов по Алматы.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fbf6f2",
+  "theme_color": "#ef5126",
+  "lang": "ru",
+  "categories": ["food", "shopping"],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='112' fill='%23ef5126'/%3E%3Ctext x='256' y='350' font-size='300' font-family='Arial' font-weight='bold' fill='white' text-anchor='middle'%3EA%3C/text%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
